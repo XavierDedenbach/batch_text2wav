@@ -4,6 +4,7 @@ import threading
 import uuid
 import typing
 import itertools
+import wave
 
 from dotenv import load_dotenv
 from elevenlabs import VoiceSettings
@@ -79,7 +80,7 @@ class AudioGenerator:
             response = self.client.text_to_speech.convert(
                 voice_id="pNInz6obpgDQGcFmaJgB",  # Adam pre-made voice
                 optimize_streaming_latency="0",
-                output_format="mp3_22050_32",
+                output_format="pcm_16000",
                 text=word,
                 model_id="eleven_turbo_v2",  # Use the turbo model for low latency
                 voice_settings=VoiceSettings(
@@ -138,7 +139,7 @@ class AudioGenerator:
                 successfully_converted_words.add(word)  # Add the word to the set of successfully converted words
                 self.write_successfully_converted(word)  # Write the word to the file
 
-                if success_count >= 1000:  # Check if 100 words have been successfully converted
+                if success_count >= 100:  # Check if 100 words have been successfully converted
                     break  # Exit the loop
 
             if self.error_count >= 2:  # Check if 2 or more errors have occurred
@@ -163,7 +164,12 @@ if __name__ == '__main__':
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     for word, audio_data in audio_data_list:
-        filename = f"{word}.wav"
-        with open(os.path.join(output_dir, filename), 'wb') as f:
-            f.write(audio_data)
+        # Convert the audio data to a mono channel WAV file
+        wav_file = wave.open(os.path.join(output_dir, f"{word}.wav"), 'wb')
+        wav_file.setnchannels(1)  # Mono channel
+        wav_file.setsampwidth(2)  # 16-bit audio
+        wav_file.setframerate(16000)  # 16kHz sample rate
+        wav_file.writeframes(audio_data)
+        wav_file.close()
+
         print(f"Generated audio file for {word}")
