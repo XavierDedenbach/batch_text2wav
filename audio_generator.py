@@ -3,6 +3,7 @@ import requests
 import threading
 import uuid
 import typing
+import itertools
 
 from dotenv import load_dotenv
 from elevenlabs import VoiceSettings
@@ -74,30 +75,35 @@ class AudioGenerator:
         Returns:
             bytes: The generated audio data.
         """
-        response = self.client.text_to_speech.convert(
-            voice_id="pNInz6obpgDQGcFmaJgB",  # Adam pre-made voice
-            optimize_streaming_latency="0",
-            output_format="mp3_22050_32",
-            text=word,
-            model_id="eleven_turbo_v2",  # Use the turbo model for low latency
-            voice_settings=VoiceSettings(
-                stability=0.0,
-                similarity_boost=1.0,
-                style=0.0,
-                use_speaker_boost=True,
+        try:
+            response = self.client.text_to_speech.convert(
+                voice_id="pNInz6obpgDQGcFmaJgB",  # Adam pre-made voice
+                optimize_streaming_latency="0",
+                output_format="mp3_22050_32",
+                text=word,
+                model_id="eleven_turbo_v2",  # Use the turbo model for low latency
+                voice_settings=VoiceSettings(
+                    stability=0.0,
+                    similarity_boost=1.0,
+                    style=0.0,
+                    use_speaker_boost=True,
+                )
             )
-        )
-        audio_data = b''  # Initialize an empty bytes object to store the audio data
-        for chunk in response:  # Iterate over the response chunks
-            audio_data += chunk  # Append each chunk to the audio data
+            audio_data = b''  # Initialize an empty bytes object to store the audio data
+            if next(itertools.islice(response, 1)) != 0:
+                for chunk in response:  # Iterate over the response chunks
+                    audio_data += chunk  # Append each chunk to the audio data
+                if audio_data:  # Check if audio data was generated
+                    print("Audio data generated successfully")  # Print a success message
+                    return audio_data  # Return the generated audio data
+            else:
+                self.error_count += 1  # Increment the error counter
+                print(f"Error generating audio file for {word}")  # Print an error message
+                return None  # Return None to indicate an error
+        except Exception as e:  # Handle other exceptions
+            print(f"Error: {e}")  # Print an error message
+            raise ApiError(status_code= e.status_code, body= e.body)
 
-        if audio_data:  # Check if audio data was generated
-            print("Audio data generated successfully")  # Print a success message
-            return audio_data  # Return the generated audio data
-        else:
-            self.error_count += 1  # Increment the error counter
-            print(f"Error generating audio file for {word}")  # Print an error message
-            return None  # Return None to indicate an error
 
     def run(self):
         """
@@ -132,7 +138,7 @@ class AudioGenerator:
                 successfully_converted_words.add(word)  # Add the word to the set of successfully converted words
                 self.write_successfully_converted(word)  # Write the word to the file
 
-                if success_count >= 100:  # Check if 100 words have been successfully converted
+                if success_count >= 1000:  # Check if 100 words have been successfully converted
                     break  # Exit the loop
 
             if self.error_count >= 2:  # Check if 2 or more errors have occurred
@@ -148,7 +154,7 @@ def cancel_script(generator):
 
 
 if __name__ == '__main__':
-    api_key = "you_api_key"
+    # api_key = "your_api_key"
     audio_generator = AudioGenerator('just_english.txt', api_key)
     cancel_thread = threading.Thread(target=cancel_script, args=(audio_generator,))
     cancel_thread.start()
