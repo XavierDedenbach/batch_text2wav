@@ -153,7 +153,7 @@ class AudioGenerator:
                 successfully_converted_words.add(word)  # Add the word to the set of successfully converted words
                 self.write_successfully_converted(word)  # Write the word to the file
 
-                if success_count >= 2:  # Check if 100 words have been successfully converted
+                if success_count >= 5000:  # Check if 2000 words have been successfully converted
                     break  # Exit the loop
 
             if self.error_count >= 2:  # Check if 2 or more errors have occurred
@@ -170,7 +170,7 @@ def cancel_script(generator):
 
 if __name__ == '__main__':
     # api_key = "your_api_key"
-    api_key = "sk_51b882c1ab94d3a056903a7913056fae07b1360901de2b65" #xavierdedenbach
+
     audio_generator = AudioGenerator('just_english.txt', 'dictionary.pls', api_key)
     cancel_thread = threading.Thread(target=cancel_script, args=(audio_generator,))
     cancel_thread.start()
