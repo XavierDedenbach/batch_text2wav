@@ -1,4 +1,5 @@
 import chardet
+import random
 
 class Extractor:
     """
@@ -107,11 +108,64 @@ class Extractor:
             # Close the lexicon tag
             f.write('</lexicon>\n')
 
+        """     def generate_words(self, word_list, num_words):
+        # Ensure each letter is represented
+        letter_words = {}
+        for letter in 'abcdefghijklmnopqrstuvwxyz':
+            letter_words[letter] = [word for word in word_list if word.startswith(letter)]
+        
+        # Sample words from each letter's list
+        sampled_words = []
+        for letter in 'abcdefghijklmnopqrstuvwxyz':
+            if letter_words[letter]:
+                sampled_words.extend(random.sample(letter_words[letter], min(1, len(letter_words[letter]))))
+        
+        # Fill the rest of the quota with random words from the entire list
+        remaining_words = num_words - len(sampled_words)
+        if remaining_words > 0:
+            sampled_words.extend(random.sample(word_list, min(remaining_words, len(word_list))))
+    
+        return sampled_words """
+
+    def generate_words(self, word_list, num_words):
+        words = []
+        letter_pairs = {}
+        for letter1 in 'abcdefghijklmnopqrstuvwxyz':
+            for letter2 in 'abcdefghijklmnopqrstuvwxyz':
+                pair = letter1 + letter2
+                letter_pairs[pair] = [word for word in word_list if word.startswith(pair) and len(word) >= 5]
+        
+        for pair in letter_pairs:
+            if letter_pairs[pair]:
+                words.extend(random.sample(letter_pairs[pair], min(9, len(letter_pairs[pair]))))
+        
+        # Fill the rest of the quota with random words from the entire list
+        remaining_words = num_words - len(words)
+        if remaining_words > 0:
+            words.extend(random.sample(word_list, min(remaining_words, len(word_list))))
+        
+        return words[:num_words]
+
+    def read_words_from_file(self, temp_file):          
+        with open(temp_file, 'r') as file:
+            return [line.strip() for line in file.readlines()]
+    
+    def shrink_database (self):
+        word_list = self.read_words_from_file(self.input_file)
+        words = self.generate_words(word_list, 3000)
+
+        with open(self.output_file, 'w') as file:
+            for word in words:
+                file.write(word + '\n')
+
     def run(self):
-        self.extract_lexemes() 
-        # elf.extract_english_words()
+        self.shrink_database()
+        # self.extract_lexemes() 
+        # self.extract_english_words()
+
 
 if __name__ == '__main__':
-    extractor = Extractor('dict.tsv', 'dictionary.pls') #Lexemes format
+    # extractor = Extractor('dict.tsv', 'dictionary.pls') #Lexemes format
     # extractor = Extractor('dict.tsv', 'just_english.txt') #English words format
+    extractor = Extractor('just_english.txt', 'small_dictionary.txt') #Shrink database
     extractor.run()
