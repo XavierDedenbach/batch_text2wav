@@ -4,7 +4,11 @@ import threading
 import uuid
 import typing
 import itertools
-import wave
+import subprocess
+import pathlib
+#os.environ['ffmpeg.exe_path'] = pathlib.PureWindowsPath(r".\ffmpeg\ffmpeg-7.0.2-essentials_build\bin\ffmpeg.exe").as_posix()
+import ffmpeg
+
 
 from dotenv import load_dotenv
 from elevenlabs import VoiceSettings
@@ -80,7 +84,7 @@ class AudioGenerator:
             response = self.client.text_to_speech.convert(
                 voice_id="pNInz6obpgDQGcFmaJgB",  # Adam pre-made voice
                 optimize_streaming_latency="0",
-                output_format="pcm_16000",
+                output_format="mp3_44100_64",
                 text=word,
                 model_id="eleven_turbo_v2",  # Use the turbo model for low latency
                 voice_settings=VoiceSettings(
@@ -139,7 +143,7 @@ class AudioGenerator:
                 successfully_converted_words.add(word)  # Add the word to the set of successfully converted words
                 self.write_successfully_converted(word)  # Write the word to the file
 
-                if success_count >= 50:  # Check if 100 words have been successfully converted
+                if success_count >= 2000:  # Check if 100 words have been successfully converted
                     break  # Exit the loop
 
             if self.error_count >= 2:  # Check if 2 or more errors have occurred
@@ -150,7 +154,7 @@ class AudioGenerator:
 
 
 def cancel_script(generator):
-    input("Press Enter to cancel...")
+    input("Press Enter to cancel..." + "\n")
     generator.cancelled = True
 
 
@@ -162,15 +166,38 @@ if __name__ == '__main__':
     cancel_thread.start()
     audio_data_list = audio_generator.run()
     output_dir = "assets"
+    
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+    
     for word, audio_data in audio_data_list:
-        # Convert the audio data to a mono channel WAV file
-        wav_file = wave.open(os.path.join(output_dir, f"{word}.wav"), 'wb')
-        wav_file.setnchannels(1)  # Mono channel
-        wav_file.setsampwidth(2)  # 16-bit audio
-        wav_file.setframerate(16000)  # 16kHz sample rate
-        wav_file.writeframes(audio_data)
-        wav_file.close()
+        # Write the audio data to a mp3 file first
+        filename = f"{word}.mp3"
+        with open(os.path.join(output_dir, filename), 'wb') as f:
+            f.write(audio_data)
+
+        # Convert the audio data to a mono channel WAV file using FFmpeg
+        output_file = os.path.join(output_dir, f"{word}.wav")
+        command = [
+           "ffmpeg.exe",
+            "-f", "mp3",  # Input format: 16-bit little-endian PCM
+            "-ac", "1",  # Input channels: mono
+            "-i", "-",  # Input from pipe
+            "-ar", "16000",  # Output sample rate: 16 kHz
+            "-ac", "1",  # Output channels: mono
+            "-f", "wav",  # Output format: WAV
+            output_file  # Output file
+        ]
+        process = subprocess.Popen(command, stdin=subprocess.PIPE)
+        process.communicate(input=audio_data)
+        process.wait() 
+        """
+        input_stream = ffmpeg.input(f"./assets/{word}.mp3", format="mp3", ar=44100)
+        output_stream = ffmpeg.output(input_stream, output_file, format="wav", ar=16000, ac=1, acodec="pcm_s16le")
+        try:
+            ffmpeg.run(output_stream)
+        except Exception as e:  # Handle other exceptions
+            print(f"Error: {e}")  # Print an error message
+            break """
 
         print(f"Generated audio file for {word}")
