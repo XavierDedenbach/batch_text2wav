@@ -6,12 +6,11 @@ import typing
 import itertools
 import subprocess
 import pathlib
-#os.environ['ffmpeg.exe_path'] = pathlib.PureWindowsPath(r".\ffmpeg\ffmpeg-7.0.2-essentials_build\bin\ffmpeg.exe").as_posix()
 import ffmpeg
 
 
 from dotenv import load_dotenv
-from elevenlabs import VoiceSettings
+from elevenlabs import VoiceSettings, PronunciationDictionaryVersionLocator
 from api_error import ApiError
 from elevenlabs.client import ElevenLabs
 
@@ -20,7 +19,7 @@ class AudioGenerator:
     A class used to generate audio files from text input using the ElevenLabs API.
     """
 
-    def __init__(self, input_file, key):
+    def __init__(self, input_file, dictionary_file, key):
         """
         Initializes the AudioGenerator object with an input file and API key.
 
@@ -33,6 +32,11 @@ class AudioGenerator:
         self.cancelled = False  # Flag to track if the process has been cancelled
         self.error_count = 0  # Counter for errors encountered during audio generation
         self.successfully_converted = self.read_successfully_converted()  # Read previously successfully converted words
+        with open(dictionary_file, "rb") as f:
+            # this dictionary changes how the words are pronounced
+            self.pronunciation_dictionary = self.client.pronunciation_dictionary.add_from_file(
+                file=f.read(), name="example", workspace_access = 'editor'
+            )
 
     def read_words(self):
         """
@@ -92,7 +96,13 @@ class AudioGenerator:
                     similarity_boost=1.0,
                     style=0.0,
                     use_speaker_boost=True,
-                )
+                ),
+                pronunciation_dictionary_locators=[ 
+                    PronunciationDictionaryVersionLocator(
+                        pronunciation_dictionary_id=self.pronunciation_dictionary.id,
+                        version_id=self.pronunciation_dictionary.version_id,
+                    )
+                ],
             )
             audio_data = b''  # Initialize an empty bytes object to store the audio data
             if next(itertools.islice(response, 1)) != 0:
@@ -143,7 +153,7 @@ class AudioGenerator:
                 successfully_converted_words.add(word)  # Add the word to the set of successfully converted words
                 self.write_successfully_converted(word)  # Write the word to the file
 
-                if success_count >= 2000:  # Check if 100 words have been successfully converted
+                if success_count >= 2:  # Check if 100 words have been successfully converted
                     break  # Exit the loop
 
             if self.error_count >= 2:  # Check if 2 or more errors have occurred
@@ -160,8 +170,8 @@ def cancel_script(generator):
 
 if __name__ == '__main__':
     # api_key = "your_api_key"
-
-    audio_generator = AudioGenerator('just_english.txt', api_key)
+    api_key = "sk_51b882c1ab94d3a056903a7913056fae07b1360901de2b65" #xavierdedenbach
+    audio_generator = AudioGenerator('just_english.txt', 'dictionary.pls', api_key)
     cancel_thread = threading.Thread(target=cancel_script, args=(audio_generator,))
     cancel_thread.start()
     audio_data_list = audio_generator.run()
