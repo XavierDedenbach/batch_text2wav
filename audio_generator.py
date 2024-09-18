@@ -154,7 +154,7 @@ class AudioGenerator:
                 successfully_converted_words.add(word)  # Add the word to the set of successfully converted words
                 self.write_successfully_converted(word)  # Write the word to the file
 
-                if success_count >= 3000:  # Check if 2000 words have been successfully converted
+                if success_count >= 100:  # Check if 2000 words have been successfully converted
                     break  # Exit the loop
 
             if self.error_count >= 2:  # Check if 2 or more errors have occurred
