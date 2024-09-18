@@ -3,7 +3,7 @@ import os
 from huggingface_hub import login
 from datasets import Dataset, Audio, load_dataset
 
-""" # Load the English spellings from small_dictionary.txt
+# Load the English spellings from small_dictionary.txt
 with open('small_dictionary.txt', 'r') as f:
     english_spellings = [line.strip() for line in f.readlines()]
 
@@ -46,7 +46,7 @@ data = {
 }
 
 # Write the dataset structure to a csv file
-pd.DataFrame(data).to_csv('dataset.csv', index=False) """
+pd.DataFrame(data).to_csv('dataset.csv', index=False)
 
 # Login to Hugging Face
 login()
