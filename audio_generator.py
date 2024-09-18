@@ -19,7 +19,7 @@ class AudioGenerator:
     A class used to generate audio files from text input using the ElevenLabs API.
     """
 
-    def __init__(self, input_file, dictionary_file, key):
+    def __init__(self, input_file, dictionary_file, tracking_doc, key):
         """
         Initializes the AudioGenerator object with an input file and API key.
 
@@ -31,7 +31,7 @@ class AudioGenerator:
         self.input_file = input_file  # Store the input file path
         self.cancelled = False  # Flag to track if the process has been cancelled
         self.error_count = 0  # Counter for errors encountered during audio generation
-        self.successfully_converted = self.read_successfully_converted()  # Read previously successfully converted words
+        self.successfully_converted = self.read_successfully_converted(tracking_doc)  # Read previously successfully converted words
         with open(dictionary_file, "rb") as f:
             # this dictionary changes how the words are pronounced
             self.pronunciation_dictionary = self.client.pronunciation_dictionary.add_from_file(
@@ -48,7 +48,7 @@ class AudioGenerator:
         with open(self.input_file, 'r') as f:  # Open the input file in read mode
             return [line.strip() for line in f.readlines()]  # Read and strip each line, returning a list of words
 
-    def read_successfully_converted(self):
+    def read_successfully_converted(self, tracking_doc):
         """
         Reads a file containing previously successfully converted words and returns them as a list.
 
@@ -56,7 +56,7 @@ class AudioGenerator:
             list: A list of previously successfully converted words.
         """
         try:
-            with open('successfully_converted.txt', 'r') as f:  # Open the file containing successfully converted words
+            with open(tracking_doc, 'r') as f:  # Open the file containing successfully converted words
                 return [line.strip() for line in f.readlines()]  # Read and strip each line, returning a list of words
         except FileNotFoundError:  # Handle the case where the file does not exist
             return []  # Return an empty list if the file does not exist
@@ -125,7 +125,8 @@ class AudioGenerator:
         Runs the audio generation process, reading words from the input file, generating audio, and writing successfully converted words to the file.
 
         Returns:
-            list: A list of tuples containing the word and generated audio data.
+            list: A list of tuples containi
+            ng the word and generated audio data.
         """
         words = self.read_words()  # Read the words from the input file
         audio_data_list = []  # Initialize an empty list to store the generated audio data
@@ -153,7 +154,7 @@ class AudioGenerator:
                 successfully_converted_words.add(word)  # Add the word to the set of successfully converted words
                 self.write_successfully_converted(word)  # Write the word to the file
 
-                if success_count >= 5000:  # Check if 2000 words have been successfully converted
+                if success_count >= 3000:  # Check if 2000 words have been successfully converted
                     break  # Exit the loop
 
             if self.error_count >= 2:  # Check if 2 or more errors have occurred
@@ -171,11 +172,14 @@ def cancel_script(generator):
 if __name__ == '__main__':
     # api_key = "your_api_key"
 
-    audio_generator = AudioGenerator('just_english.txt', 'dictionary.pls', api_key)
+    # audio_generator = AudioGenerator('just_english.txt', 'dictionary.pls', 'successfully_converted.txt', api_key) #full database
+    # output_dir = "assets" #full database
+    audio_generator = AudioGenerator('small_dictionary.txt', 'dictionary.pls', 'successfully_converted_small.txt', api_key) #small database
+    output_dir = "assets_small" #small database
     cancel_thread = threading.Thread(target=cancel_script, args=(audio_generator,))
     cancel_thread.start()
     audio_data_list = audio_generator.run()
-    output_dir = "assets"
+    output_dir = "assets_small"
     
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -201,13 +205,5 @@ if __name__ == '__main__':
         process = subprocess.Popen(command, stdin=subprocess.PIPE)
         process.communicate(input=audio_data)
         process.wait() 
-        """
-        input_stream = ffmpeg.input(f"./assets/{word}.mp3", format="mp3", ar=44100)
-        output_stream = ffmpeg.output(input_stream, output_file, format="wav", ar=16000, ac=1, acodec="pcm_s16le")
-        try:
-            ffmpeg.run(output_stream)
-        except Exception as e:  # Handle other exceptions
-            print(f"Error: {e}")  # Print an error message
-            break """
 
         print(f"Generated audio file for {word}")

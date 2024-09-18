@@ -108,25 +108,6 @@ class Extractor:
             # Close the lexicon tag
             f.write('</lexicon>\n')
 
-        """     def generate_words(self, word_list, num_words):
-        # Ensure each letter is represented
-        letter_words = {}
-        for letter in 'abcdefghijklmnopqrstuvwxyz':
-            letter_words[letter] = [word for word in word_list if word.startswith(letter)]
-        
-        # Sample words from each letter's list
-        sampled_words = []
-        for letter in 'abcdefghijklmnopqrstuvwxyz':
-            if letter_words[letter]:
-                sampled_words.extend(random.sample(letter_words[letter], min(1, len(letter_words[letter]))))
-        
-        # Fill the rest of the quota with random words from the entire list
-        remaining_words = num_words - len(sampled_words)
-        if remaining_words > 0:
-            sampled_words.extend(random.sample(word_list, min(remaining_words, len(word_list))))
-    
-        return sampled_words """
-
     def generate_words(self, word_list, num_words):
         words = []
         letter_pairs = {}
